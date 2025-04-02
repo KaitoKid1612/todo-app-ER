@@ -7,9 +7,11 @@ require("./db");
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("API Todo App");
-});
+const authRoutes = require('./routes/auth');
+const todoRoutes = require('./routes/todo');
+
+app.use('/api/auth', authRoutes);
+app.use('/api/todos', todoRoutes);
 
 app.listen(port, () => {
   console.log(`Server chạy tại http://localhost:${port}`);
