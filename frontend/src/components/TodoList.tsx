@@ -8,6 +8,7 @@ import { Loader2, Sun, Moon } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 
 interface Todo {
@@ -24,8 +25,9 @@ const TodoList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const { logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const { t, i18n } = useTranslation();
 
-  const fetchTodos = async () => {
+  const fetchTodos = React.useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.get<Todo[]>('http://localhost:5000/api/todos', {
@@ -35,11 +37,11 @@ const TodoList: React.FC = () => {
       });
       setTodos(response.data);
     } catch (err: any) {
-      toast.error(err.response?.data?.msg || 'Failed to fetch todos');
+      toast.error(err.response?.data?.msg || t('todoList.fetchError'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   const handleAddTodo = async () => {
     if (!newTodo.trim()) return;
@@ -56,9 +58,9 @@ const TodoList: React.FC = () => {
       );
       setTodos([...todos, response.data]);
       setNewTodo('');
-      toast.success('Todo added successfully');
+      toast.success(t('todoList.addSuccess'));
     } catch (err: any) {
-      toast.error(err.response?.data?.msg || 'Failed to add todo');
+      toast.error(err.response?.data?.msg || t('todoList.addError'));
     } finally {
       setLoading(false);
     }
@@ -77,9 +79,11 @@ const TodoList: React.FC = () => {
         }
       );
       setTodos(todos.map((todo) => (todo._id === id ? response.data : todo)));
-      toast.success(`Todo ${response.data.completed ? 'completed' : 'undone'}`);
+      toast.success(
+        t('todoList.toggleSuccess', { status: response.data.completed ? t('todoList.complete') : t('todoList.undo') })
+      );
     } catch (err: any) {
-      toast.error(err.response?.data?.msg || 'Failed to update todo');
+      toast.error(err.response?.data?.msg || t('todoList.toggleError'));
     } finally {
       setLoading(false);
     }
@@ -94,29 +98,38 @@ const TodoList: React.FC = () => {
         },
       });
       setTodos(todos.filter((todo) => todo._id !== id));
-      toast.success('Todo deleted successfully');
+      toast.success(t('todoList.deleteSuccess'));
     } catch (err: any) {
-      toast.error(err.response?.data?.msg || 'Failed to delete todo');
+      toast.error(err.response?.data?.msg || t('todoList.deleteError'));
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleLanguage = () => {
+    const newLang = i18n.language === 'en' ? 'vi' : 'en';
+    i18n.changeLanguage(newLang);
+    localStorage.setItem('language', newLang);
+  };
+
   useEffect(() => {
     fetchTodos();
-  }, []);
+  }, [fetchTodos]);
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Todo List</h2>
+        <h2 className="text-xl font-semibold">{t('todoList.title')}</h2>
         <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={toggleLanguage} disabled={loading}>
+            {i18n.language === 'en' ? 'VN' : 'EN'}
+          </Button>
           <div className="flex items-center gap-2">
             {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             <Switch checked={isDark} onCheckedChange={toggleTheme} disabled={loading} />
           </div>
           <Button variant="destructive" onClick={logout} disabled={loading}>
-            Logout
+            {t('todoList.logout')}
           </Button>
         </div>
       </div>
@@ -124,21 +137,23 @@ const TodoList: React.FC = () => {
         <Input
           value={newTodo}
           onChange={(e) => setNewTodo(e.target.value)}
-          placeholder="Enter a new todo"
+          placeholder={t('todoList.placeholder')}
           onKeyPress={(e) => e.key === 'Enter' && handleAddTodo()}
           disabled={loading}
+          className="dark:bg-gray-700 dark:text-white dark:border-gray-600"
         />
         <Button onClick={handleAddTodo} disabled={loading}>
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('todoList.add')}
         </Button>
       </div>
       {loading && (
         <div className="flex justify-center">
           <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="ml-2">{t('todoList.loading')}</span>
         </div>
       )}
       {todos.length === 0 && !loading && (
-        <p className="text-gray-500 dark:text-gray-400">No todos yet.</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('todoList.noTodos')}</p>
       )}
       {todos.map((todo) => (
         <Card key={todo._id} className="p-4 flex justify-between items-center">
@@ -152,7 +167,7 @@ const TodoList: React.FC = () => {
               onClick={() => handleToggleTodo(todo._id)}
               disabled={loading}
             >
-              {todo.completed ? 'Undo' : 'Complete'}
+              {todo.completed ? t('todoList.undo') : t('todoList.complete')}
             </Button>
             <Button
               variant="destructive"
@@ -160,7 +175,7 @@ const TodoList: React.FC = () => {
               onClick={() => handleDeleteTodo(todo._id)}
               disabled={loading}
             >
-              Delete
+              {t('todoList.delete')}
             </Button>
           </div>
         </Card>
